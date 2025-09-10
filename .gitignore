@@ -1,0 +1,7 @@
+.env
+.srv/
+node_modules/
+*.log
+dist/
+scripts/*.log
+EOF

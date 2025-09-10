@@ -1,61 +1,68 @@
-version: "3"
 services:
   wordpress:
     image: wordpress:latest
     depends_on:
-      - mysql
-    links:
-      - mysql
+      mysql:
+        condition: service_healthy
     ports:
-      - 8000:80
+      - "8000:80"
     restart: always
     environment:
       WORDPRESS_DB_HOST: mysql:3306
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
-      WORDPRESS_DB_NAME: wp-app
+      WORDPRESS_DB_NAME: wp_app
       WORDPRESS_DEBUG: 1
-      WORDPRESS_TABLE_PREFIX: wp_
       WORDPRESS_CONFIG_EXTRA: |
         define('FS_METHOD', 'direct');
         define('SCRIPT_DEBUG', true);
     volumes:
-      - ./.srv/wordpress/:/var/www/html
-      - ./.srv/log/:/var/log
-      - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
-
-  wpcli:
-    depends_on:
-      - mysql
-      - wordpress
-    image: wordpress:cli
-    links:
-      - mysql:mysql
-    entrypoint: wp
-    command: "--info"
-    environment:
-      WORDPRESS_DB_HOST: mysql:3306
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpress
-      WORDPRESS_DB_NAME: wp-app
-      WORDPRESS_DEBUG: 1
-      WORDPRESS_TABLE_PREFIX: wp_
-      WORDPRESS_CONFIG_EXTRA: |
-        define('FS_METHOD', 'direct');
-    volumes:
-      - ./.srv/wordpress/:/var/www/html
-      - ./.srv/log/:/var/log
-      - ./custom.ini:/usr/local/etc/php/conf.d/custom.ini
+      - wordpress_data:/var/www/html
+      - ./plugin:/var/www/html/wp-content/plugins/bond-calculator
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - wp_network
 
   mysql:
     image: mysql:5.7
     restart: always
-    ports:
-      - 3306:3306
-    volumes:
-      - "./.srv/database:/var/lib/mysql"
     environment:
       MYSQL_ROOT_PASSWORD: wordpress
-      MYSQL_DATABASE: wp-app
+      MYSQL_DATABASE: wp_app
       MYSQL_USER: wordpress
       MYSQL_PASSWORD: wordpress
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - wp_network
+
+  wpcli:
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    image: wordpress:cli
+    command: tail -f /dev/null
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./setup.sh:/setup.sh
+    networks:
+      - wp_network
+
+volumes:
+  wordpress_data:
+  mysql_data:
+
+networks:
+  wp_network:
+    driver: bridge
