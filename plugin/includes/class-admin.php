@@ -37,7 +37,6 @@ class BC_Admin
         ]);
         return @file_get_contents($vite_dev_url, false, $context) !== false;
     }
-
     public function enqueue_admin_scripts($hook)
     {
         // Only load on our admin page

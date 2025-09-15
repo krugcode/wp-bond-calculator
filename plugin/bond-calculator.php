@@ -50,16 +50,17 @@ class BondCalculator
 
     public function get_calculator_data($request)
     {
-        // Return sample data for now
         $sample_data = array(
             array(
-                'id' => 1,
+                'date' => '12 Jun 2025',
+                'email' => 'test@udit.co.za',
                 'type' => 'transfer',
                 'amount' => 500000,
                 'fee' => 15000
             ),
             array(
-                'id' => 2,
+                'date' => '10 Jun 2025',
+                'email' => 'test@identipet.com',
                 'type' => 'bond',
                 'amount' => 1000000,
                 'fee' => 25000
