@@ -132,7 +132,11 @@
 <div class="p-6 bg-white">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold text-gray-900">Bond Calculator Dashboard</h1>
-    <Button size="icon"><Github /></Button>
+    <Button
+      target="_blank"
+      href="https://github.com/krugcode/wp-bond-calculator"
+      size="icon"><Github /></Button
+    >
   </div>
 
   <Tabs.Root value="general" class="w-full">
@@ -155,7 +159,7 @@
         <p class="text-red-800">Error: {error}</p>
       </div>
     {:else}
-      <!-- General Tab (existing content) -->
+      <!-- General Tab  -->
       <Tabs.Content value="general">
         <General {calculatorData} />
       </Tabs.Content>
