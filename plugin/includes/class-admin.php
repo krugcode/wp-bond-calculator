@@ -328,16 +328,23 @@ class BC_API
 
     public function get_pdf_settings($request)
     {
+        $api_key = get_option('bc_api2pdf_key', '');
+        $brevo_api_key = get_option('bc_brevo_api_key', '');
         $template_html = get_option('bc_pdf_template', '');
         $sender_email = get_option('bc_pdf_sender_email', '');
         $sender_name = get_option('bc_pdf_sender_name', '');
-        $subject_line = get_option('bc_pdf_subject_line', '');
+        $subject_line = get_option('bc_pdf_subject_line', 'Your [CALCULATOR_TYPE] Calculator Results');
 
         return rest_ensure_response(array(
-            'template_html' => $template_html,
-            'sender_email' => $sender_email,
-            'sender_name' => $sender_name,
-            'subject_line' => $subject_line
+            'success' => true,
+            'data' => array(
+                'api_key' => $api_key,
+                'brevo_api_key' => $brevo_api_key,
+                'template_html' => $template_html,
+                'sender_email' => $sender_email,
+                'sender_name' => $sender_name,
+                'subject_line' => $subject_line
+            )
         ));
     }
 
@@ -345,10 +352,29 @@ class BC_API
     {
         $json = $request->get_json_params();
 
-        update_option('bc_pdf_template', wp_kses_post($json['template_html'] ?? ''));
-        update_option('bc_pdf_sender_email', sanitize_email($json['sender_email'] ?? ''));
-        update_option('bc_pdf_sender_name', sanitize_text_field($json['sender_name'] ?? ''));
-        update_option('bc_pdf_subject_line', sanitize_text_field($json['subject_line'] ?? ''));
+        if (isset($json['api_key'])) {
+            update_option('bc_api2pdf_key', sanitize_text_field($json['api_key']));
+        }
+
+        if (isset($json['brevo_api_key'])) {
+            update_option('bc_brevo_api_key', sanitize_text_field($json['brevo_api_key']));
+        }
+
+        if (isset($json['template_html'])) {
+            update_option('bc_pdf_template', wp_kses_post($json['template_html']));
+        }
+
+        if (isset($json['sender_email'])) {
+            update_option('bc_pdf_sender_email', sanitize_email($json['sender_email']));
+        }
+
+        if (isset($json['sender_name'])) {
+            update_option('bc_pdf_sender_name', sanitize_text_field($json['sender_name']));
+        }
+
+        if (isset($json['subject_line'])) {
+            update_option('bc_pdf_subject_line', sanitize_text_field($json['subject_line']));
+        }
 
         return rest_ensure_response(array(
             'success' => true,

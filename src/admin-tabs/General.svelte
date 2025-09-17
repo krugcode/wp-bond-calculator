@@ -42,7 +42,28 @@
     </p>
   </div>
 </div>
-
+<!-- Usage Instructions -->
+<div class="bg-blue-50 border border-blue-200 rounded-md p-4 mb-8">
+  <h4 class="text-sm font-medium text-blue-900 mb-2">Usage Instructions</h4>
+  <div class="text-xs text-blue-700 space-y-1">
+    <p><strong>Shortcodes:</strong></p>
+    <ul class="list-disc list-inside ml-2 space-y-1">
+      <li>
+        <code>[transfer_cost_calculator]</code> - For property transfer cost calculations
+      </li>
+      <li>
+        <code>[bond_cost_calculator]</code> - For mortgage bond cost calculations
+      </li>
+    </ul>
+    <p class="mt-2"><strong>Features:</strong></p>
+    <ul class="list-disc list-inside ml-2 space-y-1">
+      <li>Automatic PDF generation and download</li>
+      <li>Email results to users with Brevo integration</li>
+      <li>Mobile-friendly responsive design</li>
+      <li>Cost breakdown with detailed line items</li>
+    </ul>
+  </div>
+</div>
 <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
   <div
     class="flex justify-between items-center px-6 py-4 border-b border-gray-200"

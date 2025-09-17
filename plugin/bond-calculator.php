@@ -17,6 +17,7 @@ define('BC_PLUGIN_URL', plugin_dir_url(__FILE__));
 define('BC_PLUGIN_PATH', plugin_dir_path(__FILE__));
 
 // Include main classes
+require_once BC_PLUGIN_PATH . 'includes/class-calculator.php';
 require_once BC_PLUGIN_PATH . 'includes/class-admin.php';
 
 class BondCalculator

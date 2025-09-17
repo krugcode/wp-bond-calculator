@@ -132,22 +132,21 @@
             </div>
           {/if}
         </div>
-
-        <div class="flex items-end">
-          <Button onclick={downloadBondCosts} variant="outline" class="w-full">
-            <FileDown class="w-4 h-4 mr-2" />
-            Download Current Costs
-          </Button>
-        </div>
       </div>
     </div>
 
     <!-- Current Costs Table -->
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
+      <div
+        class="flex justify-between items-center px-6 py-4 border-b border-gray-200"
+      >
         <h4 class="text-lg font-medium text-gray-900">
           Current Bond Costs ({bondCosts.length} entries)
         </h4>
+        <Button onclick={downloadBondCosts} variant="outline">
+          <FileDown class="w-4 h-4 mr-2" />
+          Download Current Costs
+        </Button>
       </div>
 
       <div class="overflow-x-auto max-h-96">

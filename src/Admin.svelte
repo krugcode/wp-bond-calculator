@@ -135,6 +135,7 @@
     <Button
       target="_blank"
       href="https://github.com/krugcode/wp-bond-calculator"
+      class="text-white"
       size="icon"><Github /></Button
     >
   </div>

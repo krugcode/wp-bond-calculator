@@ -86,11 +86,11 @@
     <!-- Upload/Download Controls -->
     <div class="bg-gray-50 p-6 rounded-lg mb-6">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        <div class="w-full flex flex-col gap-1">
           <label class="block text-sm font-medium text-gray-700 mb-2">
             Upload Transfer Costs CSV
           </label>
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center w-full space-x-2">
             <input
               bind:this={transferFileInput}
               type="file"
@@ -130,26 +130,21 @@
             </div>
           {/if}
         </div>
-
-        <div class="flex items-end">
-          <Button
-            onclick={downloadTransferCosts}
-            variant="outline"
-            class="w-full"
-          >
-            <FileDown class="w-4 h-4 mr-2" />
-            Download Current Costs
-          </Button>
-        </div>
       </div>
     </div>
 
     <!-- Current Costs Table -->
     <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-200">
+      <div
+        class="flex items-center px-6 py-4 justify-between border-b border-gray-200"
+      >
         <h4 class="text-lg font-medium text-gray-900">
           Current Transfer Costs ({transferCosts.length} entries)
         </h4>
+        <Button onclick={downloadTransferCosts} variant="outline">
+          <FileDown class="w-4 h-4 mr-2" />
+          Download Current Costs
+        </Button>
       </div>
 
       <div class="overflow-x-auto max-h-96">
