@@ -1,0 +1,348 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Transfer Bond Costs</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 11px;
+        line-height: 1.3;
+        color: #000;
+        margin: 0;
+        padding: 0;
+      }
+
+      .container {
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #ccc;
+      }
+
+      .company-logo {
+        width: 60px;
+        height: 60px;
+        background-color: #8b4513;
+        color: white;
+        font-weight: bold;
+        font-size: 16px;
+        text-align: center;
+        line-height: 60px;
+        margin: 0 auto 10px auto;
+      }
+
+      .company-name {
+        font-size: 14px;
+        font-weight: bold;
+        color: #8b4513;
+        margin-bottom: 5px;
+      }
+
+      .company-tagline {
+        font-size: 9px;
+        color: #8b4513;
+        font-style: italic;
+        margin-bottom: 15px;
+      }
+
+      .title-row {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+
+      .title-row table {
+        width: 100%;
+      }
+
+      .document-title {
+        font-size: 16px;
+        font-weight: bold;
+        text-align: left;
+      }
+
+      .document-date {
+        font-size: 11px;
+        font-weight: bold;
+        text-align: right;
+      }
+
+      .section {
+        margin-bottom: 20px;
+      }
+
+      .section-header {
+        background-color: #f0f0f0;
+        padding: 8px;
+        font-weight: bold;
+        font-size: 12px;
+        margin-bottom: 10px;
+        border-left: 3px solid #8b4513;
+      }
+
+      .category-header {
+        font-weight: bold;
+        margin: 10px 0 5px 0;
+        font-size: 11px;
+      }
+
+      .cost-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 8px;
+      }
+
+      .cost-table td {
+        padding: 2px 5px;
+        font-size: 10px;
+        vertical-align: top;
+      }
+
+      .label-col {
+        width: 65%;
+        text-align: left;
+      }
+
+      .amount-col {
+        width: 35%;
+        text-align: right;
+        font-weight: bold;
+      }
+
+      .subtotal-row td {
+        border-top: 1px solid #333;
+        font-weight: bold;
+        padding-top: 4px;
+      }
+
+      .total-section {
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      .total-box {
+        background-color: #f5f5f5;
+        border: 1px solid #ccc;
+        padding: 12px;
+        display: inline-block;
+        min-width: 200px;
+      }
+
+      .total-text {
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .provision-section {
+        margin: 25px 0;
+        padding: 12px;
+        background-color: #fffacd;
+        border: 1px solid #ddd;
+      }
+
+      .provision-title {
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 11px;
+      }
+
+      .provision-list {
+        margin: 8px 0 0 15px;
+        padding: 0;
+      }
+
+      .provision-list li {
+        margin-bottom: 4px;
+        font-size: 10px;
+        line-height: 1.4;
+      }
+
+      .footer-notes {
+        margin-top: 20px;
+        font-size: 9px;
+        color: #555;
+        border-top: 1px solid #ddd;
+        padding-top: 12px;
+      }
+
+      .footer-notes p {
+        margin: 0 0 6px 0;
+      }
+
+      .disclaimer {
+        font-weight: bold;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="company-logo">dvh</div>
+        <div class="company-name">DYKES VAN HEERDEN GROUP OF COMPANIES</div>
+        <div class="company-tagline">professionals striving for excellence</div>
+      </div>
+
+      <div class="title-row">
+        <table>
+          <tr>
+            <td class="document-title">Transfer Bond Costs</td>
+            <td class="document-date">{{date}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-header">TRANSFER COST ON: {{transfer_amount}}</div>
+
+        <div class="category-header">Government Costs</div>
+        <table class="cost-table">
+          <tr>
+            <td class="label-col">Transfer Duty</td>
+            <td class="amount-col">{{government_costs}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">Deeds Office Fee</td>
+            <td class="amount-col">{{deeds_office_fee}}</td>
+          </tr>
+        </table>
+
+        <div class="category-header">Attorneys Costs</div>
+        <table class="cost-table">
+          <tr>
+            <td class="label-col">Attorney Fee</td>
+            <td class="amount-col">{{attorney_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">To Transaction Fee</td>
+            <td class="amount-col">{{to_transaction_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">Electronic Doc Generation Fee</td>
+            <td class="amount-col">{{electronic_doc_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">To Rates Clearance Certificate fee</td>
+            <td class="amount-col">{{rates_clearance_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">To Electronic Rates fee</td>
+            <td class="amount-col">{{electronic_rates_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">Deeds Office Search Fee</td>
+            <td class="amount-col">{{deeds_search_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">Fica Verification Fee</td>
+            <td class="amount-col">{{fica_verification_fee}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">Post & Petties</td>
+            <td class="amount-col">{{post_petties}}</td>
+          </tr>
+          <tr>
+            <td class="label-col">VAT</td>
+            <td class="amount-col">{{vat_amount}}</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td class="label-col">Sub Total</td>
+            <td class="amount-col">{{sub_total}}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="section">
+        <div class="section-header">BOND COST ON: {{bond_amount}}</div>
+
+        <div class="category-header">Government Costs</div>
+        <table class="cost-table">
+          <tr>
+            <td class="label-col">Deeds Office Fee</td>
+            <td class="amount-col">R2,281.00</td>
+          </tr>
+        </table>
+
+        <div class="category-header">Attorneys Costs</div>
+        <table class="cost-table">
+          <tr>
+            <td class="label-col">Attorney Fee</td>
+            <td class="amount-col">R56,120.00</td>
+          </tr>
+          <tr>
+            <td class="label-col">Deeds Office Search Fee</td>
+            <td class="amount-col">R259.00</td>
+          </tr>
+          <tr>
+            <td class="label-col">Electronic Instruction & Generation fee</td>
+            <td class="amount-col">R1,750.00</td>
+          </tr>
+          <tr>
+            <td class="label-col">Post & Petties</td>
+            <td class="amount-col">R2,000.00</td>
+          </tr>
+          <tr>
+            <td class="label-col">VAT</td>
+            <td class="amount-col">R9,018.00</td>
+          </tr>
+          <tr class="subtotal-row">
+            <td class="label-col">Sub Total</td>
+            <td class="amount-col">R71,419.00</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="total-section">
+        <div class="total-box">
+          <div class="total-text">Total: {{total_fee}}</div>
+        </div>
+      </div>
+
+      <div class="provision-section">
+        <div class="provision-title">
+          PROVISION MUST BE MADE FOR THE FOLLOWING AMOUNTS:-
+        </div>
+        <ul class="provision-list">
+          <li>Bank's admin and initiation fees of approximately R6,037.50</li>
+          <li>Levies for up to 12 months (normally 3 months)</li>
+          <li>
+            Transfer of an Exclusive Use Area amount of approximately R2,000.00
+            per Exclusive Use Area
+          </li>
+          <li>
+            Insurance Certificate for Sectional Title transfers in the sum of
+            approx. R750.00
+          </li>
+          <li>
+            Please note with Sectional Title that there are additional charges
+            for extra Units and Exclusive Use Areas
+          </li>
+        </ul>
+      </div>
+
+      <div class="footer-notes">
+        <p>
+          <strong
+            >Please note fees here are calculated up to R500,000,000.00</strong
+          >
+        </p>
+        <p>
+          For quotes in excess of R500,000,000.00, and for more accurate
+          calculations, please contact us.
+        </p>
+        <p class="disclaimer">
+          Disclaimer: All estimated calculations done here are provided for
+          general information purposes only and do not constitute professional
+          advice. We do not warrant the correctness of this information. For
+          more accurate calculations, please contact us.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>
