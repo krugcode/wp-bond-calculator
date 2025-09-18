@@ -1,3 +1,4 @@
+import { mount } from 'svelte';
 import TransferCostCalculator from './TransferCostCalculator.svelte';
 import BondCostCalculator from './BondCostCalculator.svelte';
 
@@ -7,7 +8,7 @@ function mountCalculators() {
   const transferElements = document.querySelectorAll('.bc-transfer-calculator');
   transferElements.forEach(element => {
     if (!element.hasAttribute('data-mounted')) {
-      new TransferCostCalculator({
+      mount(TransferCostCalculator, {
         target: element
       });
       element.setAttribute('data-mounted', 'true');
@@ -18,7 +19,7 @@ function mountCalculators() {
   const bondElements = document.querySelectorAll('.bc-bond-calculator');
   bondElements.forEach(element => {
     if (!element.hasAttribute('data-mounted')) {
-      new BondCostCalculator({
+      mount(BondCostCalculator, {
         target: element
       });
       element.setAttribute('data-mounted', 'true');

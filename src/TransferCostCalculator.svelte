@@ -1,7 +1,21 @@
 <script>
-  import { onMount } from "svelte";
+  import { Button } from "$lib/ui/button";
+  import { Input } from "$lib/ui/input";
+  import { Label } from "$lib/ui/label";
+  import { Card, CardContent, CardHeader, CardTitle } from "$lib/ui/card";
+  import { Alert, AlertDescription } from "$lib/ui/alert";
+  import { Separator } from "$lib/ui/separator";
+  import {
+    Mail,
+    Download,
+    Calculator,
+    RotateCcw,
+    AlertCircle,
+    CheckCircle,
+  } from "@lucide/svelte";
 
   let purchasePrice = "";
+  let bondAmount = "";
   let loading = false;
   let results = null;
   let error = "";
@@ -18,19 +32,9 @@
     }).format(amount);
   }
 
-  function formatNumber(value) {
-    return value.replace(/[^\d]/g, "");
-  }
-
-  function handlePriceInput(event) {
-    const value = formatNumber(event.target.value);
-    purchasePrice = value;
-    event.target.value = value ? formatCurrency(parseFloat(value)) : "";
-  }
-
   async function calculateCosts() {
     if (!purchasePrice || parseFloat(purchasePrice) <= 0) {
-      error = "Please enter a valid purchase price";
+      error = "Please enter a valid transfer amount";
       return;
     }
 
@@ -49,9 +53,11 @@
           },
           body: JSON.stringify({
             purchase_price: parseFloat(purchasePrice),
+            bond_amount: bondAmount ? parseFloat(bondAmount) : 0,
           }),
         },
       );
+      console.log(response);
 
       const data = await response.json();
 
@@ -84,9 +90,12 @@
           type: "transfer",
           data: {
             purchase_price: results.purchase_price,
+            bond_amount: results.bond_amount || 0,
             total: results.total,
+            grand_total: results.grand_total || results.total,
           },
           breakdown: results.breakdown,
+          bond_breakdown: results.bond_breakdown || null,
         }),
       });
 
@@ -123,9 +132,12 @@
           type: "transfer",
           data: {
             purchase_price: results.purchase_price,
+            bond_amount: results.bond_amount || 0,
             total: results.total,
+            grand_total: results.grand_total || results.total,
           },
           breakdown: results.breakdown,
+          bond_breakdown: results.bond_breakdown || null,
         }),
       });
 
@@ -167,6 +179,7 @@
 
   function reset() {
     purchasePrice = "";
+    bondAmount = "";
     results = null;
     error = "";
     emailAddress = "";
@@ -174,373 +187,317 @@
   }
 </script>
 
-<div class="transfer-calculator">
-  <h3>Transfer Bond Costs</h3>
+<div class="w-full max-w-2xl mx-auto space-y-6">
+  <Card>
+    <CardHeader>
+      <CardTitle class="flex items-center gap-2">
+        <Calculator class="h-5 w-5" />
+        Transfer Bond Costs
+      </CardTitle>
+    </CardHeader>
+    <CardContent class="space-y-4">
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <Label for="transfer-amount">Transfer Amount</Label>
+          <Input
+            id="transfer-amount"
+            type="number"
+            placeholder="500000"
+            bind:value={purchasePrice}
+            disabled={loading}
+            step="1000"
+            min="0"
+          />
+        </div>
 
-  <div class="form-section">
-    <div class="input-group">
-      <label for="transfer-amount">Transfer Amount</label>
-      <input
-        id="transfer-amount"
-        type="text"
-        placeholder="R500,000.00"
-        on:input={handlePriceInput}
-        disabled={loading}
-      />
-    </div>
+        <div class="space-y-2">
+          <Label for="bond-amount">Bond Amount</Label>
+          <Input
+            id="bond-amount"
+            type="number"
+            placeholder="4000000"
+            bind:value={bondAmount}
+            disabled={loading}
+            step="1000"
+            min="0"
+          />
+        </div>
 
-    <div class="button-group">
-      <button
-        on:click={calculateCosts}
-        disabled={loading || !purchasePrice}
-        class="calculate-btn"
-      >
-        {loading ? "Calculating..." : "Calculate"}
-      </button>
-      <button on:click={reset} class="reset-btn">Reset</button>
-    </div>
-  </div>
+        <div class="flex gap-2">
+          <Button
+            onclick={calculateCosts}
+            disabled={loading || !purchasePrice}
+            class="flex-1"
+          >
+            <Calculator class="h-4 w-4 mr-2" />
+            {loading ? "Calculating..." : "Calculate"}
+          </Button>
+          <Button variant="outline" onclick={reset}>
+            <RotateCcw class="h-4 w-4 mr-2" />
+            Reset
+          </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
 
   {#if error}
-    <div class="error-message">{error}</div>
+    <Alert variant="destructive">
+      <AlertCircle class="h-4 w-4" />
+      <AlertDescription>{error}</AlertDescription>
+    </Alert>
   {/if}
 
   {#if emailSuccess}
-    <div class="success-message">{emailSuccess}</div>
+    <Alert>
+      <CheckCircle class="h-4 w-4" />
+      <AlertDescription>{emailSuccess}</AlertDescription>
+    </Alert>
   {/if}
 
   {#if results}
-    <div class="results-section">
-      <div class="cost-breakdown">
-        <h4>Transfer cost on: {formatCurrency(results.purchase_price)}</h4>
+    <Card>
+      <CardHeader>
+        <CardTitle>Cost Breakdown</CardTitle>
+      </CardHeader>
+      <CardContent class="space-y-6">
+        <div class="text-center space-y-1">
+          <p class="text-sm text-muted-foreground">Transfer cost on:</p>
+          <p class="text-xl font-bold">
+            {formatCurrency(results.purchase_price)}
+          </p>
+          {#if results.bond_amount && results.bond_amount > 0}
+            <p class="text-sm text-muted-foreground">Bond cost on:</p>
+            <p class="text-xl font-bold">
+              {formatCurrency(results.bond_amount)}
+            </p>
+          {/if}
+        </div>
 
-        <!-- Government Costs -->
-        <div class="cost-section">
-          <h5>Government Costs:</h5>
-          {#each Object.entries(results.breakdown.government_costs) as [key, item]}
-            <div class="cost-item">
-              <span class="label">{item.label}</span>
-              <span class="amount">{formatCurrency(item.amount)}</span>
+        <div class="space-y-4">
+          <!-- Transfer Costs -->
+          <div class="space-y-2">
+            <h4 class="font-semibold text-sm text-muted-foreground">
+              Transfer Cost on: {formatCurrency(results.purchase_price)}
+            </h4>
+
+            <!-- Government Costs -->
+            {#if results.breakdown.government_costs}
+              <div class="space-y-1 pl-2">
+                <p class="text-xs font-medium text-muted-foreground">
+                  Government Costs:
+                </p>
+                {#each Object.entries(results.breakdown.government_costs) as [key, item]}
+                  <div class="flex justify-between items-center py-1">
+                    <span class="text-sm">{item.label}</span>
+                    <span class="font-mono text-sm"
+                      >{formatCurrency(item.amount)}</span
+                    >
+                  </div>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- Attorney Costs -->
+            {#if results.breakdown.attorney_costs}
+              <div class="space-y-1 pl-2">
+                <p class="text-xs font-medium text-muted-foreground">
+                  Attorney Costs:
+                </p>
+                {#each Object.entries(results.breakdown.attorney_costs) as [key, item]}
+                  <div class="flex justify-between items-center py-1">
+                    <span class="text-sm">{item.label}</span>
+                    <span class="font-mono text-sm"
+                      >{formatCurrency(item.amount)}</span
+                    >
+                  </div>
+                {/each}
+              </div>
+            {/if}
+
+            <!-- VAT -->
+            {#if results.breakdown.vat}
+              <div class="flex justify-between items-center py-1 pl-2">
+                <span class="text-sm">{results.breakdown.vat.label}</span>
+                <span class="font-mono text-sm"
+                  >{formatCurrency(results.breakdown.vat.amount)}</span
+                >
+              </div>
+            {/if}
+
+            <div
+              class="flex justify-between items-center py-1 font-semibold text-sm border-t pt-2"
+            >
+              <span>Sub Total</span>
+              <span class="font-mono">{formatCurrency(results.total)}</span>
             </div>
-          {/each}
-        </div>
+          </div>
 
-        <!-- Attorney Costs -->
-        <div class="cost-section">
-          <h5>Attorneys Costs:</h5>
-          {#each Object.entries(results.breakdown.attorney_costs) as [key, item]}
-            <div class="cost-item">
-              <span class="label">{item.label}</span>
-              <span class="amount">{formatCurrency(item.amount)}</span>
+          <!-- Bond Costs (if applicable) -->
+          {#if results.bond_amount && results.bond_amount > 0 && results.bond_breakdown}
+            <Separator />
+
+            <div class="space-y-2">
+              <h4 class="font-semibold text-sm text-muted-foreground">
+                Bond Cost on: {formatCurrency(results.bond_amount)}
+              </h4>
+
+              {#if results.bond_breakdown.government_costs}
+                <div class="space-y-1 pl-2">
+                  <p class="text-xs font-medium text-muted-foreground">
+                    Government Costs:
+                  </p>
+                  {#each Object.entries(results.bond_breakdown.government_costs) as [key, item]}
+                    <div class="flex justify-between items-center py-1">
+                      <span class="text-sm">{item.label}</span>
+                      <span class="font-mono text-sm"
+                        >{formatCurrency(item.amount)}</span
+                      >
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+
+              {#if results.bond_breakdown.attorney_costs}
+                <div class="space-y-1 pl-2">
+                  <p class="text-xs font-medium text-muted-foreground">
+                    Attorney Costs:
+                  </p>
+                  {#each Object.entries(results.bond_breakdown.attorney_costs) as [key, item]}
+                    <div class="flex justify-between items-center py-1">
+                      <span class="text-sm">{item.label}</span>
+                      <span class="font-mono text-sm"
+                        >{formatCurrency(item.amount)}</span
+                      >
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+
+              {#if results.bond_breakdown.vat}
+                <div class="flex justify-between items-center py-1 pl-2">
+                  <span class="text-sm">{results.bond_breakdown.vat.label}</span
+                  >
+                  <span class="font-mono text-sm"
+                    >{formatCurrency(results.bond_breakdown.vat.amount)}</span
+                  >
+                </div>
+              {/if}
+
+              <div
+                class="flex justify-between items-center py-1 font-semibold text-sm border-t pt-2"
+              >
+                <span>Sub Total</span>
+                <span class="font-mono"
+                  >{formatCurrency(results.bond_total || 0)}</span
+                >
+              </div>
             </div>
-          {/each}
+          {/if}
+
+          <!-- Grand Total -->
+          <Separator />
+          <div class="flex justify-between items-center py-2 font-bold text-lg">
+            <span>Total</span>
+            <span class="font-mono"
+              >{formatCurrency(results.grand_total || results.total)}</span
+            >
+          </div>
         </div>
 
-        <!-- VAT -->
-        <div class="cost-item">
-          <span class="label">{results.breakdown.vat.label}</span>
-          <span class="amount"
-            >{formatCurrency(results.breakdown.vat.amount)}</span
-          >
+        <Separator />
+
+        <!-- Email Section -->
+        <div class="space-y-3">
+          <Label for="email">Email Results</Label>
+          <div class="flex gap-2">
+            <Input
+              id="email"
+              type="email"
+              placeholder="Enter your email address"
+              bind:value={emailAddress}
+              disabled={sendingEmail}
+              class="flex-1"
+            />
+            <Button
+              on:click={sendEmail}
+              disabled={!emailAddress || sendingEmail}
+              variant="outline"
+            >
+              <Mail class="h-4 w-4 mr-2" />
+              {sendingEmail ? "Sending..." : "Send"}
+            </Button>
+          </div>
         </div>
 
-        <div class="cost-item total">
-          <span class="label">Sub Total</span>
-          <span class="amount">{formatCurrency(results.total)}</span>
-        </div>
-      </div>
-
-      <!-- Email Section -->
-      <div class="email-section">
-        <h4>Email Address</h4>
-        <input
-          type="email"
-          bind:value={emailAddress}
-          placeholder="Enter your email"
-          disabled={sendingEmail}
-        />
-        <button
-          on:click={sendEmail}
-          disabled={!emailAddress || sendingEmail}
-          class="email-btn"
+        <!-- Download Button -->
+        <Button
+          on:click={downloadPdf}
+          disabled={generatingPdf}
+          class="w-full"
+          size="lg"
         >
-          {sendingEmail ? "Sending..." : "Send the results via email"}
-        </button>
-      </div>
+          <Download class="h-4 w-4 mr-2" />
+          {generatingPdf ? "Generating PDF..." : "Download Results"}
+        </Button>
+      </CardContent>
+    </Card>
 
-      <!-- Download Button -->
-      <button
-        on:click={downloadPdf}
-        disabled={generatingPdf}
-        class="download-btn"
-      >
-        {generatingPdf ? "Generating..." : "DOWNLOAD RESULTS"}
-      </button>
-    </div>
+    <!-- Disclaimer Card -->
+    <Card>
+      <CardHeader>
+        <CardTitle class="text-sm">Important Information</CardTitle>
+      </CardHeader>
+      <CardContent class="text-xs space-y-3">
+        <div>
+          <p class="font-semibold mb-2">
+            PROVISION MUST BE MADE FOR THE FOLLOWING AMOUNTS:
+          </p>
+          <ul class="space-y-1 text-muted-foreground list-disc pl-4">
+            <li>Bank admin and initiation fees of approximately R6,037.50</li>
+            <li>Levies for up to 12 months (normally 3 months)</li>
+            <li>
+              Transfer of an Exclusive Use Area amount of approximately
+              R2,000.00 per Exclusive Use Area
+            </li>
+            <li>
+              Insurance Certificate for Sectional Title transfers in the sum of
+              approx. R750.00
+            </li>
+            <li>
+              Please note with Sectional Title that there are additional charges
+              for extra Units and Exclusive Use Areas
+            </li>
+            <li>
+              Additional lodgement fee payable to the deeds office in respect of
+              each transfer, mortgage bond, cancellation or cession in the sum
+              of R69.00
+            </li>
+          </ul>
+        </div>
+
+        <Separator />
+
+        <div class="space-y-2">
+          <p>Please note fees here are calculated up to R500,000,000.00</p>
+          <p>
+            For quotes in excess of R500,000,000.00, and for more accurate
+            calculations, please contact us.
+          </p>
+        </div>
+
+        <Separator />
+
+        <div>
+          <p class="font-semibold">Disclaimer:</p>
+          <p class="text-muted-foreground">
+            All estimated calculations done here are provided for general
+            information purposes only and do not constitute professional advice.
+            We do not warrant the correctness of this information. For more
+            accurate calculations, please contact us.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   {/if}
-
-  <!-- Disclaimer -->
-  <div class="disclaimer">
-    <p><strong>PROVISION MUST BE MADE FOR THE FOLLOWING AMOUNTS:</strong></p>
-    <ul>
-      <li>Bank admin and initiation fees of approximately R6,037.50</li>
-      <li>Levies for up to 12 months (normally 3 months)</li>
-      <li>
-        Transfer of an Exclusive Use Area amount of approximately R2,000.00 per
-        Exclusive Use Area
-      </li>
-      <li>
-        Insurance Certificate for Sectional Title transfers in the sum of
-        approx. R750.00
-      </li>
-      <li>
-        Please note with Sectional Title that there are additional charges for
-        extra Units and Exclusive Use Areas
-      </li>
-      <li>
-        Additional lodgement fee payable to the deeds office in respect of each
-        transfer, mortgage bond, cancellation or cession in the sum of R69.00
-      </li>
-    </ul>
-
-    <p>Please note fees here are calculated up to R500,000,000.00</p>
-    <p>
-      For quotes in excess of R500,000,000.00, and for more accurate
-      calculations, please contact us.
-    </p>
-
-    <p>
-      <strong>Disclaimer:</strong> All estimated calculations done here are provided
-      for general information purposes only and do not constitute professional advice.
-      We do not warrant the correctness of this information. For more accurate calculations,
-      please contact us.
-    </p>
-  </div>
 </div>
-
-<style>
-  .transfer-calculator {
-    max-width: 500px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: Arial, sans-serif;
-    background: #f8f9fa;
-    border-radius: 8px;
-  }
-
-  .form-section {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  }
-
-  .input-group {
-    margin-bottom: 15px;
-  }
-
-  .input-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #333;
-  }
-
-  .input-group input {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 16px;
-    box-sizing: border-box;
-  }
-
-  .button-group {
-    display: flex;
-    gap: 10px;
-  }
-
-  .calculate-btn {
-    flex: 1;
-    padding: 12px;
-    background: #007cba;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .calculate-btn:hover:not(:disabled) {
-    background: #005a87;
-  }
-
-  .calculate-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .reset-btn {
-    padding: 12px 20px;
-    background: #6c757d;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-
-  .reset-btn:hover {
-    background: #5a6268;
-  }
-
-  .results-section {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
-  }
-
-  .cost-breakdown h4 {
-    margin: 0 0 15px 0;
-    font-size: 18px;
-    color: #333;
-  }
-
-  .cost-section {
-    margin-bottom: 15px;
-  }
-
-  .cost-section h5 {
-    margin: 0 0 10px 0;
-    color: #666;
-    font-size: 14px;
-  }
-
-  .cost-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
-  }
-
-  .cost-item.total {
-    border-top: 2px solid #333;
-    border-bottom: none;
-    font-weight: bold;
-    margin-top: 10px;
-    padding-top: 15px;
-  }
-
-  .label {
-    color: #666;
-  }
-
-  .amount {
-    font-weight: bold;
-    color: #333;
-  }
-
-  .email-section {
-    margin: 20px 0;
-    padding: 15px 0;
-    border-top: 1px solid #eee;
-  }
-
-  .email-section h4 {
-    margin: 0 0 10px 0;
-    font-size: 16px;
-  }
-
-  .email-section input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-  }
-
-  .email-btn {
-    width: 100%;
-    padding: 10px;
-    background: #28a745;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-  }
-
-  .email-btn:hover:not(:disabled) {
-    background: #218838;
-  }
-
-  .email-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .download-btn {
-    width: 100%;
-    padding: 15px;
-    background: #ff8c00;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-
-  .download-btn:hover:not(:disabled) {
-    background: #e67e00;
-  }
-
-  .download-btn:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .error-message {
-    background: #f8d7da;
-    color: #721c24;
-    padding: 10px;
-    border-radius: 4px;
-    margin: 10px 0;
-  }
-
-  .success-message {
-    background: #d4edda;
-    color: #155724;
-    padding: 10px;
-    border-radius: 4px;
-    margin: 10px 0;
-  }
-
-  .disclaimer {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    font-size: 12px;
-    color: #666;
-    line-height: 1.4;
-  }
-
-  .disclaimer p {
-    margin: 10px 0;
-  }
-
-  .disclaimer ul {
-    margin: 10px 0;
-    padding-left: 20px;
-  }
-
-  .disclaimer li {
-    margin: 5px 0;
-  }
-</style>
