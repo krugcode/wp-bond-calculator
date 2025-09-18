@@ -3,8 +3,8 @@
 if (!defined('ABSPATH')) {
     exit;
 }
-$js_file = BC_PLUGIN_PATH . 'admin/dist/admin.js';
-$css_file = BC_PLUGIN_PATH . 'admin/dist/app.css'; // Changed from admin.css to app.css
+$js_file = BC_PLUGIN_PATH . 'dist/admin.js';
+$css_file = BC_PLUGIN_PATH . 'dist/app.css'; // Changed from admin.css to app.css
 $build_exists = file_exists($js_file) && file_exists($css_file);
 ?>
 <div class="wrap">

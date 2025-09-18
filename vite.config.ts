@@ -7,11 +7,11 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [tailwindcss(), svelte()],
 	build: {
-		outDir: 'plugin/admin/dist',
+		outDir: 'plugin/dist',
 		rollupOptions: {
-			input: 'src/admin.js',
+			input: ['src/admin.js', 'src/calculator.js'],
 			output: {
-				entryFileNames: 'admin.js',
+				entryFileNames: ['admin.js', 'calculator.js'],
 				assetFileNames: (assetInfo) => {
 					if (assetInfo.name.endsWith('.css')) {
 						return 'app.css' // Changed to app.css

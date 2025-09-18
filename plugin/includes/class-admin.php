@@ -44,7 +44,6 @@ class BC_Database
         dbDelta($bond_sql);
     }
 
-    // Transfer Costs Methods
     public static function get_transfer_costs()
     {
         global $wpdb;
@@ -194,20 +193,20 @@ class BC_Admin
             );
         } else {
             // Production mode - load built assets
-            $js_file = BC_PLUGIN_PATH . 'admin/dist/admin.js';
-            $css_file = BC_PLUGIN_PATH . 'admin/dist/app.css';
+            $js_file = BC_PLUGIN_PATH . 'dist/admin.js';
+            $css_file = BC_PLUGIN_PATH . 'dist/app.css';
 
             if (file_exists($js_file) && file_exists($css_file)) {
                 wp_enqueue_script(
                     'bc-admin-js',
-                    BC_PLUGIN_URL . 'admin/dist/admin.js',
+                    BC_PLUGIN_URL . 'dist/admin.js',
                     array(),
                     filemtime($js_file),
                     true
                 );
                 wp_enqueue_style(
                     'bc-admin-css',
-                    BC_PLUGIN_URL . 'admin/dist/app.css',
+                    BC_PLUGIN_URL . 'dist/app.css',
                     array(),
                     filemtime($css_file)
                 );
@@ -490,11 +489,9 @@ class BC_API
                 return $csv_data;
             }
 
-            // Clear existing data and insert new data
             BC_Database::clear_bond_costs();
             BC_Database::insert_bond_costs($csv_data);
 
-            // Return success response with count and data
             $updated_costs = BC_Database::get_bond_costs();
 
             return rest_ensure_response(array(
@@ -518,7 +515,6 @@ class BC_API
                 return new WP_Error('no_data', 'No bond costs found', array('status' => 404));
             }
 
-            // Generate CSV content
             $csv_content = $this->generate_bond_costs_csv($costs);
 
             return new WP_REST_Response($csv_content, 200, array(
@@ -531,7 +527,6 @@ class BC_API
         }
     }
 
-    // CSV Parsing and Generation Methods
     private function parse_transfer_costs_csv($file_path)
     {
         if (!file_exists($file_path)) {
@@ -544,7 +539,6 @@ class BC_API
         if (($handle = fopen($file_path, "r")) !== false) {
             $headers = fgetcsv($handle, 1000, ",");
 
-            // Validate headers (flexible matching)
             $required_headers = ['purchase_price', 'attorney_fee', 'vat', 'transfer_duty', 'deeds_office_fee', 'total_cost'];
             $header_map = array();
 
@@ -557,7 +551,6 @@ class BC_API
                 }
             }
 
-            // Check if all required headers are present
             foreach ($required_headers as $required) {
                 if (!isset($header_map[$required])) {
                     return new WP_Error('invalid_headers', "Missing required column: $required", array('status' => 400));
@@ -567,7 +560,6 @@ class BC_API
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
                 $row++;
 
-                // Skip empty rows
                 if (empty(array_filter($data))) {
                     continue;
                 }
@@ -578,7 +570,6 @@ class BC_API
                     foreach ($required_headers as $header) {
                         $value = isset($data[$header_map[$header]]) ? $data[$header_map[$header]] : '';
 
-                        // Clean and convert to float
                         $clean_value = $this->clean_currency_value($value);
 
                         if ($clean_value === false) {
@@ -616,7 +607,6 @@ class BC_API
         if (($handle = fopen($file_path, "r")) !== false) {
             $headers = fgetcsv($handle, 1000, ",");
 
-            // Validate headers (flexible matching)
             $required_headers = ['bond_amount', 'attorney_fee', 'vat', 'deeds_office_fee', 'total_cost'];
             $header_map = array();
 
@@ -629,7 +619,6 @@ class BC_API
                 }
             }
 
-            // Check if all required headers are present
             foreach ($required_headers as $required) {
                 if (!isset($header_map[$required])) {
                     return new WP_Error('invalid_headers', "Missing required column: $required", array('status' => 400));
@@ -639,7 +628,6 @@ class BC_API
             while (($data = fgetcsv($handle, 1000, ",")) !== false) {
                 $row++;
 
-                // Skip empty rows
                 if (empty(array_filter($data))) {
                     continue;
                 }
@@ -650,7 +638,6 @@ class BC_API
                     foreach ($required_headers as $header) {
                         $value = isset($data[$header_map[$header]]) ? $data[$header_map[$header]] : '';
 
-                        // Clean and convert to float
                         $clean_value = $this->clean_currency_value($value);
 
                         if ($clean_value === false) {
@@ -676,15 +663,12 @@ class BC_API
         return $csv_data;
     }
 
-    // CSV Generation Methods
     private function generate_transfer_costs_csv($costs)
     {
         $output = fopen('php://temp', 'r+');
 
-        // Write headers
         fputcsv($output, ['Purchase Price', 'Attorney Fee', 'VAT', 'Transfer Duty', 'Deeds Office Fee', 'Total Cost']);
 
-        // Write data
         foreach ($costs as $cost) {
             fputcsv($output, [
                 number_format($cost->purchase_price, 2, '.', ''),
@@ -707,10 +691,8 @@ class BC_API
     {
         $output = fopen('php://temp', 'r+');
 
-        // Write headers
         fputcsv($output, ['Bond Amount', 'Attorney Fee', 'VAT', 'Deeds Office Fee', 'Total Cost']);
 
-        // Write data
         foreach ($costs as $cost) {
             fputcsv($output, [
                 number_format($cost->bond_amount, 2, '.', ''),
@@ -728,17 +710,15 @@ class BC_API
         return $csv_content;
     }
 
-    // Utility method to clean currency values
+
     private function clean_currency_value($value)
     {
         if (is_numeric($value)) {
             return floatval($value);
         }
 
-        // Remove currency symbols, spaces, and commas
         $clean_value = preg_replace('/[R\s,]/', '', $value);
 
-        // Check if the result is numeric
         if (is_numeric($clean_value)) {
             return floatval($clean_value);
         }

@@ -18,25 +18,46 @@ class BC_Calculator
 
     public function enqueue_frontend_scripts()
     {
-        // Only enqueue on pages with our shortcodes
+
         global $post;
         if (is_a($post, 'WP_Post') && (has_shortcode($post->post_content, 'transfer_cost_calculator') || has_shortcode($post->post_content, 'bond_cost_calculator'))) {
-            wp_enqueue_script(
-                'bc-frontend',
-                BC_PLUGIN_URL . 'dist/calculator.js',
-                array(),
-                '1.0.0',
-                true
-            );
+            $js_file = BC_PLUGIN_PATH . 'dist/calculator.js';
+            $css_file = BC_PLUGIN_PATH . 'dist/app.css';
 
-            wp_enqueue_style(
-                'bc-frontend',
-                BC_PLUGIN_URL . 'dist/calculator.css',
-                array(),
-                '1.0.0'
-            );
+            if (file_exists($js_file)) {
+                wp_enqueue_script(
+                    'bc-frontend',
+                    BC_PLUGIN_URL . 'dist/calculator.js',
+                    array(),
+                    filemtime($js_file),
+                    true
+                );
 
-            // Localize script with REST API data
+                add_filter('script_loader_tag', function ($tag, $handle) {
+                    if ($handle === 'bc-frontend') {
+                        return str_replace('<script ', '<script type="text/javascript" ', $tag);
+                    }
+                    return $tag;
+                }, 10, 2);
+
+            } else {
+                if (current_user_can('manage_options')) {
+                    add_action('wp_footer', function () {
+                        echo '<script>console.warn("Bond Calculator: Frontend JavaScript not found. Run: npm run build");</script>';
+                    });
+                }
+                return;
+            }
+
+            if (file_exists($css_file)) {
+                wp_enqueue_style(
+                    'bc-frontend-css',
+                    BC_PLUGIN_URL . 'dist/app.css',
+                    array(),
+                    filemtime($css_file)
+                );
+            }
+
             wp_localize_script('bc-frontend', 'bcAjax', array(
                 'apiUrl' => rest_url('bond-calculator/v1/'),
                 'nonce' => wp_create_nonce('wp_rest')
@@ -107,7 +128,6 @@ class BC_Calculator
             return new WP_Error('no_data', 'No cost data found for this price range', array('status' => 404));
         }
 
-        // Add detailed breakdown
         $breakdown = $this->get_transfer_cost_breakdown($cost_data, $purchase_price);
 
         return rest_ensure_response(array(
@@ -133,7 +153,7 @@ class BC_Calculator
             return new WP_Error('no_data', 'No cost data found for this bond amount', array('status' => 404));
         }
 
-        // Add detailed breakdown
+        // add detailed breakdown
         $breakdown = $this->get_bond_cost_breakdown($cost_data, $bond_amount);
 
         return rest_ensure_response(array(
@@ -499,5 +519,4 @@ class BC_Calculator
     }
 }
 
-// Initialize the calculator
 new BC_Calculator();
