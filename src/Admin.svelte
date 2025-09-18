@@ -95,10 +95,13 @@
       });
 
       if (pdfResponse.ok) {
-        pdfSettings = await pdfResponse.json();
+        const result = await pdfResponse.json();
+        if (result.success) {
+          pdfSettings = result.data; // Extract the data property
+        }
       }
-    } catch (err) {
-      error = err.message;
+    } catch (err: any) {
+      error = err.message!;
     } finally {
       loading = false;
     }

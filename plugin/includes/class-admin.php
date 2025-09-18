@@ -204,6 +204,15 @@ class BC_Admin
                     filemtime($js_file),
                     true
                 );
+
+                // Add this filter to load as ES module
+                add_filter('script_loader_tag', function ($tag, $handle) {
+                    if ($handle === 'bc-admin-js') {
+                        return str_replace('<script ', '<script type="module" ', $tag);
+                    }
+                    return $tag;
+                }, 10, 2);
+
                 wp_enqueue_style(
                     'bc-admin-css',
                     BC_PLUGIN_URL . 'dist/app.css',

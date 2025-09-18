@@ -35,7 +35,7 @@ class BC_Calculator
 
                 add_filter('script_loader_tag', function ($tag, $handle) {
                     if ($handle === 'bc-frontend') {
-                        return str_replace('<script ', '<script type="text/javascript" ', $tag);
+                        return str_replace('<script ', '<script type="module" ', $tag);
                     }
                     return $tag;
                 }, 10, 2);
