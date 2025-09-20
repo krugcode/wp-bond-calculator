@@ -12,12 +12,20 @@ A WordPress plugin for calculating bond and transfer costs.
 ### Setup
 
 ```bash
-# Install dependencies
+
 npm install
 
-# Start WordPress environment
+
 docker-compose up -d
 
-# Start Vite dev server (for HMR)
-npm run dev
+
+npm run build
+```
+
+TODO: HMR
+
+### WP Logs
+
+```bash
+docker-compose logs -f wordpress
 ```

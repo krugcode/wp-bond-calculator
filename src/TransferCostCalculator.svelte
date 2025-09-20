@@ -44,7 +44,7 @@
 
     try {
       const response = await fetch(
-        `${window.bcAjax.apiUrl}calculate-transfer-cost`,
+        `${window.bcAjax.apiUrl}calculate-combined-cost`,
         {
           method: "POST",
           headers: {
@@ -57,7 +57,6 @@
           }),
         },
       );
-      console.log(response);
 
       const data = await response.json();
 
@@ -87,11 +86,12 @@
           "X-WP-Nonce": window.bcAjax.nonce,
         },
         body: JSON.stringify({
-          type: "transfer",
+          type: "combined",
           data: {
             purchase_price: results.purchase_price,
             bond_amount: results.bond_amount || 0,
-            total: results.total,
+            transfer_total: results.total,
+            bond_total: results.bond_total || 0,
             grand_total: results.grand_total || results.total,
           },
           breakdown: results.breakdown,
@@ -99,7 +99,9 @@
         }),
       });
 
+      console.log(response);
       const data = await response.json();
+      console.log("Data", data);
 
       if (data.success) {
         window.open(data.pdf_url, "_blank");
@@ -129,11 +131,12 @@
           "X-WP-Nonce": window.bcAjax.nonce,
         },
         body: JSON.stringify({
-          type: "transfer",
+          type: "combined",
           data: {
             purchase_price: results.purchase_price,
             bond_amount: results.bond_amount || 0,
-            total: results.total,
+            transfer_total: results.total,
+            bond_total: results.bond_total || 0,
             grand_total: results.grand_total || results.total,
           },
           breakdown: results.breakdown,
@@ -157,7 +160,7 @@
         },
         body: JSON.stringify({
           email: emailAddress,
-          type: "transfer",
+          type: "combined",
           pdf_url: pdfData.pdf_url,
         }),
       });
@@ -261,24 +264,11 @@
         <CardTitle>Cost Breakdown</CardTitle>
       </CardHeader>
       <CardContent class="space-y-6">
-        <div class="text-center space-y-1">
-          <p class="text-sm text-muted-foreground">Transfer cost on:</p>
-          <p class="text-xl font-bold">
-            {formatCurrency(results.purchase_price)}
-          </p>
-          {#if results.bond_amount && results.bond_amount > 0}
-            <p class="text-sm text-muted-foreground">Bond cost on:</p>
-            <p class="text-xl font-bold">
-              {formatCurrency(results.bond_amount)}
-            </p>
-          {/if}
-        </div>
-
         <div class="space-y-4">
           <!-- Transfer Costs -->
           <div class="space-y-2">
             <h4 class="font-semibold text-sm text-muted-foreground">
-              Transfer Cost on: {formatCurrency(results.purchase_price)}
+              Transfer Cost on {formatCurrency(results.purchase_price)}
             </h4>
 
             <!-- Government Costs -->
@@ -339,7 +329,7 @@
 
             <div class="space-y-2">
               <h4 class="font-semibold text-sm text-muted-foreground">
-                Bond Cost on: {formatCurrency(results.bond_amount)}
+                Bond Cost on {formatCurrency(results.bond_amount)}
               </h4>
 
               {#if results.bond_breakdown.government_costs}
@@ -420,7 +410,7 @@
               class="flex-1"
             />
             <Button
-              on:click={sendEmail}
+              onclick={sendEmail}
               disabled={!emailAddress || sendingEmail}
               variant="outline"
             >
@@ -432,7 +422,7 @@
 
         <!-- Download Button -->
         <Button
-          on:click={downloadPdf}
+          onclick={downloadPdf}
           disabled={generatingPdf}
           class="w-full"
           size="lg"

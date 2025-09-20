@@ -18,7 +18,6 @@ class BC_Calculator
 
     public function enqueue_frontend_scripts()
     {
-
         global $post;
         if (is_a($post, 'WP_Post') && (has_shortcode($post->post_content, 'transfer_cost_calculator') || has_shortcode($post->post_content, 'bond_cost_calculator'))) {
             $js_file = BC_PLUGIN_PATH . 'dist/calculator.js';
@@ -85,14 +84,20 @@ class BC_Calculator
 
     public function register_routes()
     {
-        // Calculate transfer cost
+        // NEW: Combined calculation endpoint
+        register_rest_route('bond-calculator/v1', '/calculate-combined-cost', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'calculate_combined_cost'),
+            'permission_callback' => '__return_true'
+        ));
+
+        // Existing separate endpoints (keep for backward compatibility)
         register_rest_route('bond-calculator/v1', '/calculate-transfer-cost', array(
             'methods' => 'POST',
             'callback' => array($this, 'calculate_transfer_cost'),
             'permission_callback' => '__return_true'
         ));
 
-        // Calculate bond cost
         register_rest_route('bond-calculator/v1', '/calculate-bond-cost', array(
             'methods' => 'POST',
             'callback' => array($this, 'calculate_bond_cost'),
@@ -112,6 +117,53 @@ class BC_Calculator
             'callback' => array($this, 'send_email'),
             'permission_callback' => '__return_true'
         ));
+    }
+
+    // NEW: Combined calculation method
+    public function calculate_combined_cost($request)
+    {
+        $purchase_price = floatval($request->get_param('purchase_price'));
+        $bond_amount = floatval($request->get_param('bond_amount'));
+
+        if ($purchase_price <= 0) {
+            return new WP_Error('invalid_price', 'Invalid purchase price', array('status' => 400));
+        }
+
+        // Calculate transfer cost (required)
+        $transfer_cost_data = BC_Database::calculate_transfer_cost($purchase_price);
+        if (!$transfer_cost_data) {
+            return new WP_Error('no_transfer_data', 'No transfer cost data found for this price range', array('status' => 404));
+        }
+
+        $transfer_breakdown = $this->get_transfer_cost_breakdown($transfer_cost_data, $purchase_price);
+
+        $result = array(
+            'success' => true,
+            'purchase_price' => $purchase_price,
+            'cost_data' => $transfer_cost_data,
+            'breakdown' => $transfer_breakdown,
+            'total' => $transfer_cost_data->total_cost
+        );
+
+        // Calculate bond cost if provided
+        if ($bond_amount > 0) {
+            $bond_cost_data = BC_Database::calculate_bond_cost($bond_amount);
+            if ($bond_cost_data) {
+                $bond_breakdown = $this->get_bond_cost_breakdown($bond_cost_data, $bond_amount);
+
+                $result['bond_amount'] = $bond_amount;
+                $result['bond_cost_data'] = $bond_cost_data;
+                $result['bond_breakdown'] = $bond_breakdown;
+                $result['bond_total'] = $bond_cost_data->total_cost;
+                $result['grand_total'] = $transfer_cost_data->total_cost + $bond_cost_data->total_cost;
+            }
+        }
+
+        if (!isset($result['grand_total'])) {
+            $result['grand_total'] = $result['total'];
+        }
+
+        return rest_ensure_response($result);
     }
 
     public function calculate_transfer_cost($request)
@@ -153,7 +205,6 @@ class BC_Calculator
             return new WP_Error('no_data', 'No cost data found for this bond amount', array('status' => 404));
         }
 
-        // add detailed breakdown
         $breakdown = $this->get_bond_cost_breakdown($cost_data, $bond_amount);
 
         return rest_ensure_response(array(
@@ -165,12 +216,15 @@ class BC_Calculator
         ));
     }
 
+
+
     public function generate_pdf($request)
     {
         try {
-            $type = $request->get_param('type'); // 'transfer' or 'bond'
+            $type = $request->get_param('type');
             $data = $request->get_param('data');
             $breakdown = $request->get_param('breakdown');
+            $bond_breakdown = $request->get_param('bond_breakdown');
 
             if (!$type || !$data) {
                 return new WP_Error('missing_data', 'Missing required data', array('status' => 400));
@@ -180,7 +234,7 @@ class BC_Calculator
             $template = get_option('bc_pdf_template', $this->get_default_pdf_template());
 
             // Replace placeholders in template
-            $html = $this->populate_pdf_template($template, $type, $data, $breakdown);
+            $html = $this->populate_pdf_template($template, $type, $data, $breakdown, $bond_breakdown);
 
             // Get API2PDF settings
             $api_key = get_option('bc_api2pdf_key');
@@ -203,6 +257,133 @@ class BC_Calculator
         } catch (Exception $e) {
             return new WP_Error('pdf_error', $e->getMessage(), array('status' => 500));
         }
+    }
+
+    private function populate_pdf_template($template, $type, $data, $breakdown, $bond_breakdown = null)
+    {
+        $replacements = array(
+            '[DATE]' => date('d/m/Y')
+        );
+
+        // Handle combined type (both transfer and bond)
+        if ($type === 'combined' && isset($data['bond_amount']) && $data['bond_amount'] > 0) {
+            // Both transfer and bond sections visible
+            $replacements['[TRANSFER_SECTION_START]'] = '';
+            $replacements['[TRANSFER_SECTION_END]'] = '';
+            $replacements['[BOND_SECTION_START]'] = '';
+            $replacements['[BOND_SECTION_END]'] = '';
+
+            $replacements['[TRANSFER_AMOUNT]'] = 'R' . number_format($data['purchase_price'], 2);
+            $replacements['[TRANSFER_COSTS]'] = $this->format_breakdown_for_pdf($breakdown);
+            $replacements['[BOND_AMOUNT]'] = 'R' . number_format($data['bond_amount'], 2);
+            $replacements['[BOND_COSTS]'] = $bond_breakdown ? $this->format_breakdown_for_pdf($bond_breakdown) : '';
+            $replacements['[TOTAL]'] = 'R' . number_format($data['grand_total'], 2);
+
+        } elseif ($type === 'combined' || $type === 'transfer') {
+            // Transfer only (bond section hidden)
+            $replacements['[TRANSFER_SECTION_START]'] = '';
+            $replacements['[TRANSFER_SECTION_END]'] = '';
+            $replacements['[BOND_SECTION_START]'] = '<!-- ';
+            $replacements['[BOND_SECTION_END]'] = ' -->';
+
+            $replacements['[TRANSFER_AMOUNT]'] = 'R' . number_format($data['purchase_price'], 2);
+            $replacements['[TRANSFER_COSTS]'] = $this->format_breakdown_for_pdf($breakdown);
+            $replacements['[BOND_AMOUNT]'] = '';
+            $replacements['[BOND_COSTS]'] = '';
+            $replacements['[TOTAL]'] = 'R' . number_format($data['total'], 2);
+
+        } else {
+            // Bond only (transfer section hidden)
+            $replacements['[TRANSFER_SECTION_START]'] = '<!-- ';
+            $replacements['[TRANSFER_SECTION_END]'] = ' -->';
+            $replacements['[BOND_SECTION_START]'] = '';
+            $replacements['[BOND_SECTION_END]'] = '';
+
+            $replacements['[TRANSFER_AMOUNT]'] = '';
+            $replacements['[TRANSFER_COSTS]'] = '';
+            $replacements['[BOND_AMOUNT]'] = 'R' . number_format($data['bond_amount'], 2);
+            $replacements['[BOND_COSTS]'] = $this->format_breakdown_for_pdf($breakdown);
+            $replacements['[TOTAL]'] = 'R' . number_format($data['total'], 2);
+        }
+
+        return str_replace(array_keys($replacements), array_values($replacements), $template);
+    }
+
+    private function format_breakdown_for_pdf($breakdown)
+    {
+        $html = '';
+
+        foreach ($breakdown as $section_key => $section) {
+            if ($section_key === 'government_costs') {
+                $html .= '<strong>Government Costs:</strong><br>';
+                foreach ($section as $item) {
+                    if (isset($item['label']) && isset($item['amount'])) {
+                        $html .= $item['label'] . ' - R' . number_format($item['amount'], 2) . '<br>';
+                    }
+                }
+            } elseif ($section_key === 'attorney_costs') {
+                $html .= '<strong>Attorneys Costs:</strong><br>';
+                foreach ($section as $item) {
+                    if (isset($item['label']) && isset($item['amount'])) {
+                        $html .= $item['label'] . ' - R' . number_format($item['amount'], 2) . '<br>';
+                    }
+                }
+            } elseif ($section_key === 'vat' && isset($section['label']) && isset($section['amount'])) {
+                $html .= $section['label'] . ' - R' . number_format($section['amount'], 2) . '<br>';
+            }
+        }
+
+        return $html;
+    }
+
+    private function generate_pdf_via_api2pdf($html, $api_key)
+    {
+        $payload = array(
+            'html' => $html,
+            'options' => array(
+                'landscape' => false,
+                'printBackground' => true,
+                'format' => 'A4'
+            )
+        );
+
+        $response = wp_remote_post('https://v2.api2pdf.com/chrome/pdf/html', array(
+            'headers' => array(
+                'Authorization' => trim($api_key),
+                'Content-Type' => 'application/json'
+            ),
+            'body' => json_encode($payload),
+            'timeout' => 30
+        ));
+
+        if (is_wp_error($response)) {
+            return $response;
+        }
+
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+
+        if ($response_code !== 200) {
+            return new WP_Error('api2pdf_http_error', 'API2PDF HTTP Error: ' . $response_code, array('status' => $response_code));
+        }
+
+        $data = json_decode($body, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return new WP_Error('invalid_json', 'Invalid JSON from API2PDF', array('status' => 500));
+        }
+
+        // API2PDF returns "Success" (capital S) and "FileUrl"
+        if (!isset($data['Success']) || !$data['Success']) {
+            $error = isset($data['Error']) ? $data['Error'] : 'Unknown API2PDF error';
+            return new WP_Error('api2pdf_failed', 'API2PDF failed: ' . $error, array('status' => 500));
+        }
+
+        if (!isset($data['FileUrl'])) {
+            return new WP_Error('no_pdf_url', 'No PDF URL returned from API2PDF', array('status' => 500));
+        }
+
+        return $data['FileUrl'];
     }
 
     public function send_email($request)
@@ -331,97 +512,21 @@ class BC_Calculator
         );
     }
 
-    private function populate_pdf_template($template, $type, $data, $breakdown)
-    {
-        $replacements = array(
-            '[DATE]' => date('d/m/Y')
-        );
 
-        if ($type === 'transfer') {
-            $replacements['[TRANSFER_SECTION_START]'] = '';
-            $replacements['[TRANSFER_SECTION_END]'] = '';
-            $replacements['[BOND_SECTION_START]'] = '<!-- ';
-            $replacements['[BOND_SECTION_END]'] = ' -->';
-            $replacements['[TRANSFER_AMOUNT]'] = 'R' . number_format($data['purchase_price'], 2);
-            $replacements['[TRANSFER_COSTS]'] = $this->format_breakdown_for_pdf($breakdown, 'transfer');
-            $replacements['[BOND_AMOUNT]'] = '';
-            $replacements['[BOND_COSTS]'] = '';
-            $replacements['[TOTAL]'] = 'R' . number_format($data['total'], 2);
-        } else {
-            $replacements['[TRANSFER_SECTION_START]'] = '<!-- ';
-            $replacements['[TRANSFER_SECTION_END]'] = ' -->';
-            $replacements['[BOND_SECTION_START]'] = '';
-            $replacements['[BOND_SECTION_END]'] = '';
-            $replacements['[TRANSFER_AMOUNT]'] = '';
-            $replacements['[TRANSFER_COSTS]'] = '';
-            $replacements['[BOND_AMOUNT]'] = 'R' . number_format($data['bond_amount'], 2);
-            $replacements['[BOND_COSTS]'] = $this->format_breakdown_for_pdf($breakdown, 'bond');
-            $replacements['[TOTAL]'] = 'R' . number_format($data['total'], 2);
-        }
 
-        return str_replace(array_keys($replacements), array_values($replacements), $template);
-    }
 
-    private function format_breakdown_for_pdf($breakdown, $type)
-    {
-        $html = '';
 
-        foreach ($breakdown as $section_key => $section) {
-            if ($section_key === 'government_costs') {
-                $html .= '<strong>Government Costs:</strong><br>';
-            } elseif ($section_key === 'attorney_costs') {
-                $html .= '<strong>Attorneys Costs:</strong><br>';
-            }
 
-            if (is_array($section)) {
-                foreach ($section as $item) {
-                    if (isset($item['label']) && isset($item['amount'])) {
-                        $html .= $item['label'] . ' - R' . number_format($item['amount'], 2) . '<br>';
-                    }
-                }
-            } else {
-                $html .= $section['label'] . ' - R' . number_format($section['amount'], 2) . '<br>';
-            }
-        }
-
-        return $html;
-    }
-
-    private function generate_pdf_via_api2pdf($html, $api_key)
-    {
-        $response = wp_remote_post('https://v2.api2pdf.com/chrome/pdf/html', array(
-            'headers' => array(
-                'Authorization' => $api_key,
-                'Content-Type' => 'application/json'
-            ),
-            'body' => json_encode(array(
-                'html' => $html,
-                'options' => array(
-                    'landscape' => false,
-                    'printBackground' => true,
-                    'format' => 'A4'
-                )
-            )),
-            'timeout' => 30
-        ));
-
-        if (is_wp_error($response)) {
-            return $response;
-        }
-
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-
-        if (!isset($data['pdf']) || !$data['success']) {
-            return new WP_Error('pdf_generation_failed', 'Failed to generate PDF', array('status' => 500));
-        }
-
-        return $data['pdf'];
-    }
 
     private function send_email_via_brevo($email, $type, $pdf_url, $api_key)
     {
-        $calculator_type = ($type === 'transfer') ? 'Transfer Cost' : 'Bond Cost';
+        $calculator_types = array(
+            'transfer' => 'Transfer Cost',
+            'bond' => 'Bond Cost',
+            'combined' => 'Transfer & Bond Cost'
+        );
+
+        $calculator_type = isset($calculator_types[$type]) ? $calculator_types[$type] : 'Calculator';
         $subject_template = get_option('bc_pdf_subject_line', 'Your [CALCULATOR_TYPE] Calculator Results');
         $subject = str_replace('[CALCULATOR_TYPE]', $calculator_type, $subject_template);
 
@@ -455,7 +560,13 @@ class BC_Calculator
 
     private function get_email_template($type, $pdf_url)
     {
-        $calculator_type = ($type === 'transfer') ? 'Transfer Cost' : 'Bond Cost';
+        $calculator_types = array(
+            'transfer' => 'Transfer Cost',
+            'bond' => 'Bond Cost',
+            'combined' => 'Transfer & Bond Cost'
+        );
+
+        $calculator_type = isset($calculator_types[$type]) ? $calculator_types[$type] : 'Calculator';
 
         return "
         <h2>Your {$calculator_type} Calculator Results</h2>
